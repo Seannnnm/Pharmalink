@@ -1,0 +1,7 @@
+| Method | Path | Purpose | Maps to Need |
+| :--- | :--- | :--- | :--- |
+| GET | `/inventory?medicineId={id}&sortBy=price` | Return a list of stock availability and prices for a specific medication across different pharmacies. | [Consumer team] needs to read the price of a medication across multiple pharmacies in order to render a 'lowest price' sorting filter... |
+| GET | `/inventory/{id}` | Return the exact real-time stock level and details for a single inventory record before finalizing a checkout. | [Consumer team] needs to read the stock quantity of a specific medicine in order to confirm availability before allowing a user to proceed... |
+| GET | `/pharmacies` | Return a list of verified pharmacies with their geographic coordinates to plot on a map. | [Consumer team] needs to read a pharmacy's geographic location and contact details in order to plot the store on a map... |
+| GET | `/pharmacies/{id}` | Return detailed contact information (phone number, address) for a single pharmacy to enable Call and Directions. | [Consumer team] needs to read a pharmacy's geographic location and contact details in order to plot the store on a map... |
+| POST | `/reservations` | Create a new reservation for a patient to secure a specific medication at a chosen pharmacy. | [Consumer team] needs to create a reservation in order to secure a specific medication at a chosen pharmacy for in-person pickup. |
