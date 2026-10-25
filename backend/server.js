@@ -21,7 +21,6 @@ const pool = mysql.createPool({
   connectionLimit: 10
 });
 
-
 const AREA_COORDINATES = {
   "Nairobi CBD": [-1.2864, 36.8172],
   "Westlands": [-1.2647, 36.8030],
@@ -167,6 +166,7 @@ app.post("/api/inventory", async (req, res, next) => {
   try {
     const { medicine, quantity, price, status } = req.body;
     const pharmacyId = req.body.pharmacy_id || 1;
+    
     const [result] = await pool.query(
       `INSERT INTO inventory (pharmacy_id, medicine, quantity, price, status)
        VALUES (?, ?, ?, ?, ?)`,
@@ -194,12 +194,12 @@ app.patch("/api/inventory/:id", async (req, res, next) => {
     const [result] = await pool.query(
       `UPDATE inventory
        SET quantity = ?, price = ?, status = ?
-       WHERE id = ? AND pharmacy_id = ?`,
-      [quantity, price, status, id, pharmacyId]
+       WHERE id = ?${pharmacyId ? " AND pharmacy_id = ?" : ""}`,
+      pharmacyId ? [quantity, price, status, id, pharmacyId] : [quantity, price, status, id]
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Inventory item not found for this pharmacy" });
+      return res.status(404).json({ message: "Inventory item not found or unauthorized" });
     }
 
     const [rows] = await pool.query(
