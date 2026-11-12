@@ -1,0 +1,9 @@
+| Method | Path | Purpose | Maps to Need |
+| :--- | :--- | :--- | :--- |
+| GET | `/medicines?q={query}` | Return a list of available medicine stock with real-time inventory levels. | Strathmore Cafeteria App needs to read a list of available medicine stock in order to display medication availability for online student orders. |
+| GET | `/medicines/{id}` | Return real-time stock levels and details for a specific medication ID. | Strathmore Cafeteria App needs to read real-time stock levels for a specific medication ID in order to block checkouts when local inventory is depleted. |
+| GET | `/pharmacies` | Return store location details and regional availability for pharmacies. | Strathmore Cafeteria App needs to read store location details in order to display pharmacy availability context alongside medical orders. |
+| POST | `/medicines` | Create a new medicine record in the PharmaLink inventory. | Pharmacy manager needs to create a new medicine record in order to add essential medications during stock replenishment. |
+| GET | `/cafeteria/menu` | Return available cafeteria food items and integrated medicine listings. | Strathmore Cafeteria App needs to read a combined menu of food and medicine in order to render the online ordering dashboard. |
+| POST | `/cafeteria/orders` | Create a new student order containing food or medicine items. | Strathmore Cafeteria App needs to create a new order in order to process student checkouts for food and medical supplies. |
+| GET | `/cafeteria/orders/{id}` | Return order history and fulfillment status for a specific order. | Strathmore Cafeteria App needs to read order history and status in order to allow users to track their ongoing orders. |

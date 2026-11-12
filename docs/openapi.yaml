@@ -1,0 +1,407 @@
+openapi: 3.0.0
+info:
+  title: PharmaLink API
+  description: |
+    Medicine stock finder and inventory API for partner apps.
+    A "medicine" is one stock line: one medicine at one pharmacy, with its stock level and price.
+    Every error response has the same shape: `{ "message": "..." }`.
+  version: 1.2.0
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+security:
+  - ApiKeyAuth: []
+paths:
+  /medicines:
+    get:
+      summary: List medicine stock, with optional search filters
+      parameters:
+        - name: q
+          in: query
+          description: Part of a medicine name, case-insensitive.
+          required: false
+          schema:
+            type: string
+            maxLength: 120
+            example: amox
+        - name: area
+          in: query
+          description: Part of a pharmacy area name.
+          required: false
+          schema:
+            type: string
+            maxLength: 120
+            example: Nairobi CBD
+        - name: pharmacyId
+          in: query
+          description: Only stock held by this pharmacy.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+        - name: inStock
+          in: query
+          description: true for stockLevel above 0, false for stockLevel equal to 0.
+          required: false
+          schema:
+            type: string
+            enum: ['true', 'false']
+            example: 'true'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: Matching stock lines, highest stock first, then cheapest. An empty list if nothing matches.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Medicine'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      summary: Add a medicine to a pharmacy's stock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewMedicine'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '201':
+          description: Created. Returns the new stock line.
+          headers:
+            Location:
+              description: Address of the new medicine
+              schema:
+                type: string
+                example: /medicines/12
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Medicine'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: That pharmacy already lists a medicine with this name. Use PUT to change it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Pharmacy 2 already lists Cetirizine 10mg. Use PUT /medicines/{id} to change it.
+  /medicines/{id}:
+    parameters:
+      - $ref: '#/components/parameters/MedicineId'
+    get:
+      summary: Get one stock line by id
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Medicine'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Replace the name, category, stock level and price of a stock line
+      description: Sets absolute values, so sending the same request twice leaves the same end state. Never creates a record.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MedicineUpdate'
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: Updated. Returns the stock line as it is now.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Medicine'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The pharmacy already lists another medicine with the new name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Remove a stock line
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '204':
+          description: Deleted. No body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /pharmacies:
+    get:
+      summary: List partner pharmacies
+      parameters:
+        - name: area
+          in: query
+          description: Part of an area name.
+          required: false
+          schema:
+            type: string
+            example: Westlands
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: Pharmacies sorted by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pharmacy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /pharmacies/{id}:
+    get:
+      summary: Get one pharmacy by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pharmacy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Each consuming team gets its own key from us privately.
+  parameters:
+    MedicineId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Missing or invalid API key
+    TooManyRequests:
+      description: More than 100 requests in a minute with this key. Wait Retry-After seconds.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            example: 42
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Too many requests
+              retryAfter:
+                type: integer
+                example: 42
+    BadRequest:
+      description: The request is invalid (missing field, wrong type, unusable value, or bad id). Nothing was changed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: stockLevel must be an integer
+    NotFound:
+      description: No record has this id
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Medicine 999 not found
+  schemas:
+    Medicine:
+      type: object
+      required: [id, name, category, stockLevel, unitPrice, status, pharmacyId, pharmacyName, area, updatedAt]
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Amoxicillin
+        category:
+          type: string
+          example: Antibiotic
+        stockLevel:
+          type: integer
+          minimum: 0
+          example: 24
+        unitPrice:
+          type: number
+          description: Price in Kenyan shillings
+          example: 180
+        status:
+          type: string
+          enum: [in_stock, low_stock, out_of_stock]
+          description: out_of_stock when stockLevel is 0, low_stock when it is 1 to 9, in_stock from 10.
+          example: in_stock
+        pharmacyId:
+          type: integer
+          example: 1
+        pharmacyName:
+          type: string
+          example: AfyaCare Pharmacy
+        area:
+          type: string
+          example: Nairobi CBD
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-11-10T08:30:00.000Z'
+    NewMedicine:
+      type: object
+      required: [name, category, stockLevel, unitPrice, pharmacyId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          example: Cetirizine 10mg
+        category:
+          type: string
+          minLength: 1
+          maxLength: 60
+          example: Allergy
+        stockLevel:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          example: 15
+        unitPrice:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 1000000
+          description: Up to 2 decimal places
+          example: 80
+        pharmacyId:
+          type: integer
+          minimum: 1
+          description: Must be an existing pharmacy
+          example: 2
+    MedicineUpdate:
+      type: object
+      required: [name, category, stockLevel, unitPrice]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          example: Cetirizine 10mg
+        category:
+          type: string
+          minLength: 1
+          maxLength: 60
+          example: Allergy
+        stockLevel:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          example: 3
+        unitPrice:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 1000000
+          example: 85
+    Pharmacy:
+      type: object
+      required: [id, name, area, latitude, longitude, verified]
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: AfyaCare Pharmacy
+        area:
+          type: string
+          example: Nairobi CBD
+        distance:
+          type: string
+          description: Display text, not a number
+          example: 0.7 km
+        eta:
+          type: string
+          description: Display text, not a number
+          example: 7 min
+        latitude:
+          type: number
+          example: -1.2864
+        longitude:
+          type: number
+          example: 36.8172
+        verified:
+          type: boolean
+          example: true
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: name is required
